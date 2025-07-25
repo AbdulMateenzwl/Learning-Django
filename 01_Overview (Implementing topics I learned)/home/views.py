@@ -4,6 +4,9 @@ from datetime import datetime
 from home.models import Contact
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib import messages
+from .serializers import ContactSerializer
+from rest_framework.response import Response
+from rest_framework.decorators import api_view
 
 
 def index(request):
@@ -36,10 +39,11 @@ def contact(request):
     return render(request, 'contact.html')
 
 @csrf_exempt
+@api_view(['GET'])
 def get_contacts(request):
 
     if request.method == "GET":
-        # contacts = Contact.objects.all()
+        contacts = Contact.objects.all()
         # contacts = Contact.objects.filter(name="mateen")
         # contacts = Contact.objects.filter(name__contains="mat")
         # contacts = Contact.objects.filter(date__year=2025)
@@ -52,8 +56,39 @@ def get_contacts(request):
         # contacts = Contact.objects.values_list('name')
 
         # Chaining
-        contacts =Contact.objects.filter(name="test").exclude(date__year=2024).order_by('-date')
+        # contacts =Contact.objects.filter(name="test").exclude(date__year=2024).order_by('-date')
+
+        # print(contacts)
+        # return HttpResponse(contacts)
+    
+
+        serializer = ContactSerializer(contacts, many = True)
+
+        return Response(serializer.data)
+
+from rest_framework.views import APIView
+
+class HelloWorld(APIView):
+    def get(self, request):
+        return Response({"message": "Hello from class view!"})
 
 
-        print(contacts)
-        return HttpResponse(contacts)
+from rest_framework.generics import GenericAPIView
+from rest_framework.mixins import ListModelMixin, CreateModelMixin
+
+class PostListCreateView(GenericAPIView, ListModelMixin, CreateModelMixin):
+    queryset = Contact.objects.all()
+    serializer_class = ContactSerializer
+
+    def get(self, request):
+        return self.list(request)
+
+    def post(self, request):
+        return self.create(request)
+
+
+from rest_framework.viewsets import ModelViewSet
+
+class ContactViewSet(ModelViewSet):
+    queryset = Contact.objects.all()
+    serializer_class = ContactSerializer
