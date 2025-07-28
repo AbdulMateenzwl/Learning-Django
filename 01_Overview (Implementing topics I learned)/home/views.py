@@ -88,7 +88,21 @@ class PostListCreateView(GenericAPIView, ListModelMixin, CreateModelMixin):
 
 
 from rest_framework.viewsets import ModelViewSet
+from rest_framework import status
 
 class ContactViewSet(ModelViewSet):
     queryset = Contact.objects.all()
     serializer_class = ContactSerializer
+
+    def create(self, request, *args, **kwargs):
+        data = request.data
+        data['data'] = "2021-11-12"  
+
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+
+        return Response(
+            {"message": "Post created successfully!", "data": serializer.data},
+            status=status.HTTP_201_CREATED
+        )
