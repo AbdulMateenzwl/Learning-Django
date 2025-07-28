@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JWT Authentication Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"], input[type="email"], input[type="password"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .success {
+            color: green;
+            background-color: #d4edda;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .error {
+            color: red;
+            background-color: #f8d7da;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .hidden {
+            display: none;
+        }
+        .token-display {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            word-break: break-all;
+            font-family: monospace;
+            margin: 10px 0;
+        }
+        .user-info {
+            background-color: #e7f3ff;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>JWT Authentication Demo</h1>
+        
+        <!-- Registration Section -->
+        <div class="section">
+            <h2>Register New User</h2>
+            <form id="registerForm">
+                <div class="form-group">
+                    <label for="reg_username">Username:</label>
+                    <input type="text" id="reg_username" required>
+                </div>
+                <div class="form-group">
+                    <label for="reg_email">Email:</label>
+                    <input type="email" id="reg_email" required>
+                </div>
+                <div class="form-group">
+                    <label for="reg_first_name">First Name:</label>
+                    <input type="text" id="reg_first_name">
+                </div>
+                <div class="form-group">
+                    <label for="reg_last_name">Last Name:</label>
+                    <input type="text" id="reg_last_name">
+                </div>
+                <div class="form-group">
+                    <label for="reg_password">Password:</label>
+                    <input type="password" id="reg_password" required>
+                </div>
+                <div class="form-group">
+                    <label for="reg_password2">Confirm Password:</label>
+                    <input type="password" id="reg_password2" required>
+                </div>
+                <button type="submit">Register</button>
+            </form>
+            <div id="registerMessage"></div>
+        </div>
+
+        <!-- Login Section -->
+        <div class="section">
+            <h2>Login</h2>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="login_username">Username:</label>
+                    <input type="text" id="login_username" required>
+                </div>
+                <div class="form-group">
+                    <label for="login_password">Password:</label>
+                    <input type="password" id="login_password" required>
+                </div>
+                <button type="submit">Login</button>
+            </form>
+            <div id="loginMessage"></div>
+        </div>
+
+        <!-- Token Display Section -->
+        <div class="section" id="tokenSection">
+            <h2>JWT Tokens</h2>
+            <div id="tokenDisplay"></div>
+        </div>
+
+        <!-- User Profile Section -->
+        <div class="section hidden" id="profileSection">
+            <h2>User Profile</h2>
+            <button onclick="getUserProfile()">Get Profile</button>
+            <button onclick="logout()">Logout</button>
+            <div id="profileDisplay"></div>
+            
+            <!-- Profile Update Form -->
+            <div class="hidden" id="updateForm">
+                <h3>Update Profile</h3>
+                <form id="profileUpdateForm">
+                    <div class="form-group">
+                        <label for="update_email">Email:</label>
+                        <input type="email" id="update_email">
+                    </div>
+                    <div class="form-group">
+                        <label for="update_first_name">First Name:</label>
+                        <input type="text" id="update_first_name">
+                    </div>
+                    <div class="form-group">
+                        <label for="update_last_name">Last Name:</label>
+                        <input type="text" id="update_last_name">
+                    </div>
+                    <button type="submit">Update Profile</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let accessToken = localStorage.getItem('access_token');
+        let refreshToken = localStorage.getItem('refresh_token');
+
+        // Show profile section if user is logged in
+        if (accessToken) {
+            document.getElementById('profileSection').classList.remove('hidden');
+        }
+
+        // Register form handler
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = {
+                username: document.getElementById('reg_username').value,
+                email: document.getElementById('reg_email').value,
+                first_name: document.getElementById('reg_first_name').value,
+                last_name: document.getElementById('reg_last_name').value,
+                password: document.getElementById('reg_password').value,
+                password2: document.getElementById('reg_password2').value,
+            };
+
+            try {
+                const response = await fetch('/api/register/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const data = await response.json();
+                const messageDiv = document.getElementById('registerMessage');
+
+                if (response.ok) {
+                    messageDiv.innerHTML = `<div class="success">${data.message}</div>`;
+                    document.getElementById('registerForm').reset();
+                    
+                    // Store tokens
+                    localStorage.setItem('access_token', data.tokens.access);
+                    localStorage.setItem('refresh_token', data.tokens.refresh);
+                    accessToken = data.tokens.access;
+                    refreshToken = data.tokens.refresh;
+                    
+                    displayTokens(data.tokens);
+                    document.getElementById('profileSection').classList.remove('hidden');
+                } else {
+                    messageDiv.innerHTML = `<div class="error">Error: ${data.error}</div>`;
+                }
+            } catch (error) {
+                document.getElementById('registerMessage').innerHTML = `<div class="error">Error: ${error.message}</div>`;
+            }
+        });
+
+        // Login form handler
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = {
+                username: document.getElementById('login_username').value,
+                password: document.getElementById('login_password').value,
+            };
+
+            try {
+                const response = await fetch('/api/token/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const data = await response.json();
+                const messageDiv = document.getElementById('loginMessage');
+
+                if (response.ok) {
+                    messageDiv.innerHTML = `<div class="success">Login successful!</div>`;
+                    document.getElementById('loginForm').reset();
+                    
+                    // Store tokens
+                    localStorage.setItem('access_token', data.access);
+                    localStorage.setItem('refresh_token', data.refresh);
+                    accessToken = data.access;
+                    refreshToken = data.refresh;
+                    
+                    displayTokens({access: data.access, refresh: data.refresh});
+                    document.getElementById('profileSection').classList.remove('hidden');
+                } else {
+                    messageDiv.innerHTML = `<div class="error">Error: ${data.detail || 'Login failed'}</div>`;
+                }
+            } catch (error) {
+                document.getElementById('loginMessage').innerHTML = `<div class="error">Error: ${error.message}</div>`;
+            }
+        });
+
+        // Display JWT tokens
+        function displayTokens(tokens) {
+            const tokenDisplay = document.getElementById('tokenDisplay');
+            tokenDisplay.innerHTML = `
+                <h3>Access Token:</h3>
+                <div class="token-display">${tokens.access}</div>
+                <h3>Refresh Token:</h3>
+                <div class="token-display">${tokens.refresh}</div>
+            `;
+        }
+
+        // Get user profile
+        async function getUserProfile() {
+            try {
+                const response = await fetch('/api/profile/', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json',
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const profileDisplay = document.getElementById('profileDisplay');
+                    profileDisplay.innerHTML = `
+                        <div class="user-info">
+                            <h3>User Information:</h3>
+                            <p><strong>ID:</strong> ${data.user.id}</p>
+                            <p><strong>Username:</strong> ${data.user.username}</p>
+                            <p><strong>Email:</strong> ${data.user.email}</p>
+                            <p><strong>First Name:</strong> ${data.user.first_name}</p>
+                            <p><strong>Last Name:</strong> ${data.user.last_name}</p>
+                            <p><strong>Date Joined:</strong> ${new Date(data.user.date_joined).toLocaleDateString()}</p>
+                            <p><strong>Last Login:</strong> ${data.user.last_login ? new Date(data.user.last_login).toLocaleDateString() : 'Never'}</p>
+                        </div>
+                        <button onclick="showUpdateForm()">Update Profile</button>
+                    `;
+                } else if (response.status === 401) {
+                    // Token might be expired, try to refresh
+                    await refreshAccessToken();
+                    getUserProfile(); // Retry
+                } else {
+                    alert('Failed to get profile');
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        // Show update profile form
+        function showUpdateForm() {
+            document.getElementById('updateForm').classList.remove('hidden');
+        }
+
+        // Profile update form handler
+        document.getElementById('profileUpdateForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = {
+                email: document.getElementById('update_email').value,
+                first_name: document.getElementById('update_first_name').value,
+                last_name: document.getElementById('update_last_name').value,
+            };
+
+            try {
+                const response = await fetch('/api/profile/update/', {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    alert('Profile updated successfully!');
+                    document.getElementById('updateForm').classList.add('hidden');
+                    getUserProfile(); // Refresh profile display
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        });
+
+        // Refresh access token
+        async function refreshAccessToken() {
+            try {
+                const response = await fetch('/api/token/refresh/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        refresh: refreshToken
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    accessToken = data.access;
+                    localStorage.setItem('access_token', data.access);
+                } else {
+                    // Refresh token is invalid, logout user
+                    logout();
+                }
+            } catch (error) {
+                logout();
+            }
+        }
+
+        // Logout function
+        async function logout() {
+            try {
+                await fetch('/api/logout/', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        refresh_token: refreshToken
+                    })
+                });
+            } catch (error) {
+                console.error('Logout error:', error);
+            }
+
+            // Clear tokens and hide profile section
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+            accessToken = null;
+            refreshToken = null;
+            
+            document.getElementById('profileSection').classList.add('hidden');
+            document.getElementById('profileDisplay').innerHTML = '';
+            document.getElementById('tokenDisplay').innerHTML = '';
+            
+            alert('Logged out successfully!');
+        }
+
+        // Get CSRF token
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    </script>
+</body>
+</html>

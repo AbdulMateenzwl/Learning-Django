@@ -30,3 +30,8 @@ def loginUser(request):
 def logoutUser(request):
     logout(request)
     return redirect("/login")
+
+
+def jwt_demo(request):
+    """JWT Authentication Demo Page"""
+    return render(request, 'jwt_demo.html')
