@@ -1,0 +1,27 @@
+meta {
+  name: Get Posts
+  type: http
+  seq: 3
+}
+
+get {
+  url: http://localhost:8000/api/posts/
+  body: none
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+  {
+    "title":"Title",
+    "content":"content of post"
+  }
+}
+
+settings {
+  encodeUrl: true
+}

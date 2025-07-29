@@ -1,0 +1,27 @@
+meta {
+  name: Update Post
+  type: http
+  seq: 5
+}
+
+put {
+  url: http://localhost:8000/api/posts/1/
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: {{username}}
+  password: {{password}}
+}
+
+body:json {
+  {
+    "title":"Title",
+    "content":"content of post"
+  }
+}
+
+settings {
+  encodeUrl: true
+}

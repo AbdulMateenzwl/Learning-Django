@@ -1,0 +1,27 @@
+meta {
+  name: Create Post
+  type: http
+  seq: 1
+}
+
+post {
+  url: http://localhost:8000/api/posts/
+  body: json
+  auth: basic
+}
+
+auth:basic {
+  username: staff
+  password: pass
+}
+
+body:json {
+  {
+    "title":"Title",
+    "content":"content of post"
+  }
+}
+
+settings {
+  encodeUrl: true
+}
